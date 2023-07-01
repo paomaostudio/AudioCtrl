@@ -17,7 +17,6 @@ processes = psutil.process_iter()
 # 初始化各种文件路径
 script_dir = os.path.dirname(os.path.abspath(__file__))
 icon_path = os.path.join(script_dir, "icon.png")
-icon_path2 = os.path.join(script_dir, "icon.ico")
 config = configparser.RawConfigParser()
 config_file = os.path.join(script_dir, 'config.ini')
 # 配置日志记录
@@ -46,7 +45,9 @@ def check_config_file():
         info("脚本本地配置文件不存在")
         os.startfile("config.ini")
         tray_app.notify("初次设置", "请填写修改配置文件，并重新打开软件")
-        os._exit(0)
+        time.sleep(3)
+        tray_app.stop()
+        #os._exit(0)
 
 
 def setting():
@@ -79,12 +80,17 @@ def exit(icon, item):
     icon.stop()
 
 
+def help():
+    webbrowser("https://github.com/paomaostudio/AudioCtrl")
+
+
 def create_tray_app():
     image = Image.open(icon_path)
     menu = (
         pystray.MenuItem("配置", setting),
         pystray.MenuItem("取消关机", cancel_poweroff),
         pystray.MenuItem("日志", show_log),
+        pystray.MenuItem("帮助", help),
         pystray.MenuItem("退出", exit),
     )
     return pystray.Icon("AudioCtrl", image, "AudioCtrl", menu)
@@ -102,6 +108,7 @@ def on_connect(client, userdata, flags, rc):
         time.sleep(3)
         tray_app.stop()
         os._exit(0)
+
 
 # 收到消息回调函数
 def on_message(client, userdata, msg):
