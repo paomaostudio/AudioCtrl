@@ -81,7 +81,7 @@ def exit(icon, item):
 
 
 def help():
-    webbrowser("https://github.com/paomaostudio/AudioCtrl")
+    webbrowser.open("https://github.com/paomaostudio/AudioCtrl")
 
 
 def create_tray_app():
