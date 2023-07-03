@@ -11,6 +11,7 @@ import psutil
 import win32com.client
 
 # 初始化各种文件路径
+help_url = "https://github.com/paomaostudio/AudioCtrl"
 script_dir = (os.path.dirname(os.path.realpath(sys.argv[0])))  # 当前脚本工作路径
 os.chdir(script_dir)
 exe_path = os.path.join(script_dir, "AudioCtrl.exe")
@@ -78,10 +79,8 @@ def check_config_file():
 
 
 def setting():
-    #webbrowser("config.ini")
     os.startfile("config.ini")
     tray_app.stop()
-    #os._exit(0)
 
 
 def show_log(icon, item):
@@ -116,7 +115,7 @@ def exit(icon, item):
 
 
 def help():
-    webbrowser.open("https://github.com/paomaostudio/AudioCtrl")
+    webbrowser.open(help_url)
 
 
 def create_tray_app():
