@@ -11,7 +11,7 @@ import psutil
 import win32com.client
 
 # 初始化各种文件路径
-help_url = "https://github.com/paomaostudio/AudioCtrl"
+help_url = "https://gitee.com/z779750025/AudioCtrl/blob/main/README.md"
 script_dir = (os.path.dirname(os.path.realpath(sys.argv[0])))  # 当前脚本工作路径
 os.chdir(script_dir)
 exe_path = os.path.join(script_dir, "AudioCtrl.exe")
@@ -25,7 +25,7 @@ shortcut_path = os.path.join(startup_folder, "AudioCtrl" + ".lnk")
 shortcut = shell.CreateShortcut(shortcut_path)
 shortcut.TargetPath = exe_path
 # 读取配置文件
-with open(config_file, 'r', encoding='utf-8') as file:
+with open(config_file, 'r', encoding='utf-8-sig') as file:
     config.read_string(file.read())
 mqtt_client_id = config.get('MQTT', 'client_id')
 mqtt_topic = config.get('MQTT', 'topic')
