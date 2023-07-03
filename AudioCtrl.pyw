@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import paho.mqtt.client as mqtt
 import pystray
@@ -7,50 +8,77 @@ import logging
 import configparser
 import webbrowser
 import psutil
-
-# 指定要检查的进程名字或关键词
-process_name = "AudioCtrl.exe"
-
-# 获取当前运行的进程列表
-processes = psutil.process_iter()
+import win32com.client
 
 # 初始化各种文件路径
-script_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = (os.path.dirname(os.path.realpath(sys.argv[0])))  # 当前脚本工作路径
+os.chdir(script_dir)
+exe_path = os.path.join(script_dir, "AudioCtrl.exe")
 icon_path = os.path.join(script_dir, "icon.png")
 config = configparser.RawConfigParser()
 config_file = os.path.join(script_dir, 'config.ini')
-# 配置日志记录
-logging.basicConfig(filename='ac.log', level=logging.INFO, encoding='utf-8', format='%(asctime)s - %(levelname)s - %(message)s')
-
+# 初始化快捷方式路径
+shell = win32com.client.Dispatch("WScript.Shell")
+startup_folder = shell.SpecialFolders("Startup")
+shortcut_path = os.path.join(startup_folder, "AudioCtrl" + ".lnk")
+shortcut = shell.CreateShortcut(shortcut_path)
+shortcut.TargetPath = exe_path
+# 读取配置文件
 with open(config_file, 'r', encoding='utf-8') as file:
     config.read_string(file.read())
 mqtt_client_id = config.get('MQTT', 'client_id')
 mqtt_topic = config.get('MQTT', 'topic')
+# 配置日志记录
+logging.basicConfig(filename='ac.log', level=logging.INFO, encoding='utf-8', format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def info(info):
+    print(info)
     logging.info(info)
 
 
-# 检查指定的进程是否已经在运行
-for process in processes:
-    if process.name() == process_name:
-        info("程序已经在运行中")
-        os._exit(0)
+def create_startup_entry():
+    info("添加开机启动项")
+    shortcut.Save()
+
+
+def toggle_startup_entry():
+    # 切换安装和删除开机启动项
+    if os.path.exists(shortcut_path):
+        os.remove(shortcut_path)
+        notify_startup(False)
+        info("删除开机启动项")
+    else:
+        notify_startup(True)
+        create_startup_entry()
+
+
+def check_initialization():
+    flag_file = "initialized.flag"
+    if os.path.exists(flag_file):
+        info("已经执行过初始化操作了")
+        # 已经初始化过了，不需要再执行
+        return True
+    else:
+        create_startup_entry()
+        info("创建Flag文件，初始化")
+        # 创建标志文件
+        with open(flag_file, 'w') as f:
+            f.write("Initialized")
+        return False
 
 
 def check_config_file():
-    
     if mqtt_client_id == "" or mqtt_topic == "":
         info("脚本本地配置文件不存在")
         os.startfile("config.ini")
         tray_app.notify("初次设置", "请填写修改配置文件，并重新打开软件")
         time.sleep(3)
         tray_app.stop()
-        #os._exit(0)
 
 
 def setting():
+    #webbrowser("config.ini")
     os.startfile("config.ini")
     tray_app.stop()
     #os._exit(0)
@@ -59,6 +87,13 @@ def setting():
 def show_log(icon, item):
     os.startfile("ac.log")
     info("打开日志文件")
+
+
+def notify_startup(key):
+    if key:
+        tray_app.notify("提醒", "设置开机启动")
+    else:
+        tray_app.notify("提醒", "取消开机启动")
 
 
 def notify_shutdown():
@@ -87,6 +122,7 @@ def help():
 def create_tray_app():
     image = Image.open(icon_path)
     menu = (
+        pystray.MenuItem("切换开机启动", toggle_startup_entry),
         pystray.MenuItem("配置", setting),
         pystray.MenuItem("取消关机", cancel_poweroff),
         pystray.MenuItem("日志", show_log),
@@ -100,14 +136,15 @@ def create_tray_app():
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         info("连接成功")
+        # 初始化，初次链接成功创建开机启动
+        check_initialization()
         client.subscribe(mqtt_topic)
     else:
         info("连接失败 %s" % (rc))
         os.startfile("config.ini")
         tray_app.notify("连接失败", "请手动修改配置文件，并重新打开软件")
-        time.sleep(3)
+        time.sleep(5)
         tray_app.stop()
-        os._exit(0)
 
 
 # 收到消息回调函数
@@ -135,7 +172,6 @@ def connect_mqtt():
 
 
 def run_script(icon):
-    print(icon)
     icon.visible = True
     check_config_file()
     connect_mqtt()
